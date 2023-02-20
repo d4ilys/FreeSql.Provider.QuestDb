@@ -57,11 +57,11 @@ namespace FreeSql.QuestDb
             { typeof(double?).FullName, CsToDb.New(NpgsqlDbType.Double, "double", "double", false, true, null) },
             {
                 typeof(decimal).FullName,
-                CsToDb.New(NpgsqlDbType.Double, "double", "double NOT NULL", false, false, 0)
+                CsToDb.New(NpgsqlDbType.Numeric, "double", "double NOT NULL", false, false, 0)
             },
             {
                 typeof(decimal?).FullName,
-                CsToDb.New(NpgsqlDbType.Double, "double", "double", false, true, null)
+                CsToDb.New(NpgsqlDbType.Numeric, "double", "double", false, true, null)
             },
 
             { typeof(string).FullName, CsToDb.New(NpgsqlDbType.Varchar, "string", "string", false, null, "") },

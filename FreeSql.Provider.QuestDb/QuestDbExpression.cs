@@ -12,8 +12,9 @@ namespace FreeSql.QuestDb
 {
     class QuestDbExpression : CommonExpression
     {
-
-        public QuestDbExpression(CommonUtils common) : base(common) { }
+        public QuestDbExpression(CommonUtils common) : base(common)
+        {
+        }
 
         public override string ExpressionLambdaToSqlOther(Expression exp, ExpTSC tsc)
         {
@@ -23,7 +24,8 @@ namespace FreeSql.QuestDb
                 case ExpressionType.ArrayLength:
                     var arrOper = (exp as UnaryExpression)?.Operand;
                     var arrOperExp = getExp(arrOper);
-                    if (arrOperExp.StartsWith("(") || arrOperExp.EndsWith(")")) return $"array_length(array[{arrOperExp.TrimStart('(').TrimEnd(')')}],1)";
+                    if (arrOperExp.StartsWith("(") || arrOperExp.EndsWith(")"))
+                        return $"array_length(array[{arrOperExp.TrimStart('(').TrimEnd(')')}],1)";
                     if (arrOper.Type == typeof(byte[])) return $"octet_length({getExp(arrOper)})";
                     return $"case when {arrOperExp} is null then 0 else array_length({arrOperExp},1) end";
                 case ExpressionType.Convert:
@@ -33,10 +35,12 @@ namespace FreeSql.QuestDb
                     {
                         switch (exp.Type.NullableTypeOrThis().ToString())
                         {
-                            case "System.Boolean": return $"(({getExp(operandExp)})::varchar not in ('0','false','f','no'))";
+                            case "System.Boolean":
+                                return $"(({getExp(operandExp)})::varchar not in ('0','false','f','no'))";
                             case "System.Byte": return $"({getExp(operandExp)})::int2";
                             case "System.Char": return $"substr(({getExp(operandExp)})::char, 1, 1)";
-                            case "System.DateTime": return ExpressionConstDateTime(operandExp) ?? $"({getExp(operandExp)})::timestamp";
+                            case "System.DateTime":
+                                return ExpressionConstDateTime(operandExp) ?? $"({getExp(operandExp)})::timestamp";
                             case "System.Decimal": return $"({getExp(operandExp)})::numeric";
                             case "System.Double": return $"({getExp(operandExp)})::float8";
                             case "System.Int16": return $"({getExp(operandExp)})::int2";
@@ -51,6 +55,7 @@ namespace FreeSql.QuestDb
                             case "System.Guid": return $"({getExp(operandExp)})::uuid";
                         }
                     }
+
                     break;
                 case ExpressionType.Call:
                     var callExp = exp as MethodCallExpression;
@@ -61,10 +66,13 @@ namespace FreeSql.QuestDb
                         case "TryParse":
                             switch (callExp.Method.DeclaringType.NullableTypeOrThis().ToString())
                             {
-                                case "System.Boolean": return $"(({getExp(callExp.Arguments[0])})::varchar not in ('0','false','f','no'))";
+                                case "System.Boolean":
+                                    return $"(({getExp(callExp.Arguments[0])})::varchar not in ('0','false','f','no'))";
                                 case "System.Byte": return $"({getExp(callExp.Arguments[0])})::int2";
                                 case "System.Char": return $"substr(({getExp(callExp.Arguments[0])})::char, 1, 1)";
-                                case "System.DateTime": return ExpressionConstDateTime(callExp.Arguments[0]) ?? $"({getExp(callExp.Arguments[0])})::timestamp";
+                                case "System.DateTime":
+                                    return ExpressionConstDateTime(callExp.Arguments[0]) ??
+                                           $"({getExp(callExp.Arguments[0])})::timestamp";
                                 case "System.Decimal": return $"({getExp(callExp.Arguments[0])})::numeric";
                                 case "System.Double": return $"({getExp(callExp.Arguments[0])})::float8";
                                 case "System.Int16": return $"({getExp(callExp.Arguments[0])})::int2";
@@ -77,6 +85,7 @@ namespace FreeSql.QuestDb
                                 case "System.UInt64": return $"({getExp(callExp.Arguments[0])})::int8";
                                 case "System.Guid": return $"({getExp(callExp.Arguments[0])})::uuid";
                             }
+
                             break;
                         case "NewGuid":
                             return null;
@@ -90,7 +99,8 @@ namespace FreeSql.QuestDb
                             if (callExp.Method.DeclaringType.IsNumberType()) return "random()";
                             return null;
                         case "ToString":
-                            if (callExp.Object != null) return callExp.Arguments.Count == 0 ? $"({getExp(callExp.Object)})::text" : null;
+                            if (callExp.Object != null)
+                                return callExp.Arguments.Count == 0 ? $"({getExp(callExp.Object)})::text" : null;
                             return null;
                     }
 
@@ -115,6 +125,7 @@ namespace FreeSql.QuestDb
                             }
                         }
                     }
+
                     if (objType == null) objType = callExp.Method.DeclaringType;
                     if (objType != null || objType.IsArrayOrList())
                     {
@@ -134,9 +145,11 @@ namespace FreeSql.QuestDb
                                         if (objType == typeof(JArray))
                                             return $"(coalesce({left},'[]') ? ({json})::text)";
                                         if (json.StartsWith("'") && json.EndsWith("'"))
-                                            return $"(coalesce({left},'{{}}') @> {_common.FormatSql("{0}", JToken.Parse(json.Trim('\'')))})";
+                                            return
+                                                $"(coalesce({left},'{{}}') @> {_common.FormatSql("{0}", JToken.Parse(json.Trim('\'')))})";
                                         return $"(coalesce({left},'{{}}') @> ({json})::jsonb)";
-                                    case "ContainsKey": return $"(coalesce({left},'{{}}') ? {getExp(callExp.Arguments[argIndex])})";
+                                    case "ContainsKey":
+                                        return $"(coalesce({left},'{{}}') ? {getExp(callExp.Arguments[argIndex])})";
                                     case "Concat":
                                         var right2 = getExp(callExp.Arguments[argIndex]);
                                         return $"(coalesce({left},'{{}}') || {right2})";
@@ -144,11 +157,14 @@ namespace FreeSql.QuestDb
                                     case "Count": return $"jsonb_array_length(coalesce({left},'[]'))";
                                     case "Parse":
                                         var json2 = getExp(callExp.Arguments[argIndex]);
-                                        if (json2.StartsWith("'") && json2.EndsWith("'")) return _common.FormatSql("{0}", JToken.Parse(json2.Trim('\'')));
+                                        if (json2.StartsWith("'") && json2.EndsWith("'"))
+                                            return _common.FormatSql("{0}", JToken.Parse(json2.Trim('\'')));
                                         return $"({json2})::jsonb";
                                 }
+
                                 break;
                         }
+
                         if (objType == typeof(Dictionary<string, string>))
                         {
                             left = objExp == null ? null : getExp(objExp);
@@ -162,22 +178,27 @@ namespace FreeSql.QuestDb
                                 case "Concat": return $"({left} || {getExp(callExp.Arguments[argIndex])})";
                                 case "GetLength":
                                 case "GetLongLength":
-                                case "Count": return $"case when {left} is null then 0 else array_length(akeys({left}),1) end";
+                                case "Count":
+                                    return $"case when {left} is null then 0 else array_length(akeys({left}),1) end";
                                 case "Keys": return $"akeys({left})";
                                 case "Values": return $"avals({left})";
                             }
                         }
+
                         switch (callExp.Method.Name)
                         {
                             case "Any":
                                 left = objExp == null ? null : getExp(objExp);
-                                if (left.StartsWith("(") || left.EndsWith(")")) left = $"array[{left.TrimStart('(').TrimEnd(')')}]";
+                                if (left.StartsWith("(") || left.EndsWith(")"))
+                                    left = $"array[{left.TrimStart('(').TrimEnd(')')}]";
                                 return $"(case when {left} is null then 0 else array_length({left},1) end > 0)";
                             case "Contains":
                                 tsc.SetMapColumnTmp(null);
                                 var args1 = getExp(callExp.Arguments[argIndex]);
                                 var oldMapType = tsc.SetMapTypeReturnOld(tsc.mapTypeTmp);
-                                var oldDbParams = objExp?.NodeType == ExpressionType.MemberAccess ? tsc.SetDbParamsReturnOld(null) : null; //#900 UseGenerateCommandParameterWithLambda(true) 子查询 bug、以及 #1173 参数化 bug
+                                var oldDbParams = objExp?.NodeType == ExpressionType.MemberAccess
+                                    ? tsc.SetDbParamsReturnOld(null)
+                                    : null; //#900 UseGenerateCommandParameterWithLambda(true) 子查询 bug、以及 #1173 参数化 bug
                                 tsc.isNotSetMapColumnTmp = true;
                                 left = objExp == null ? null : getExp(objExp);
                                 tsc.isNotSetMapColumnTmp = false;
@@ -186,31 +207,39 @@ namespace FreeSql.QuestDb
                                 //判断 in 或 array @> array
                                 if (left.StartsWith("array[") || left.EndsWith("]"))
                                     return $"({args1}) in ({left.Substring(6, left.Length - 7)})";
-                                if (left.StartsWith("(") || left.EndsWith(")")) //在各大 Provider AdoProvider 中已约定，500元素分割, 3空格\r\n4空格
-                                    return $"(({args1}) in {left.Replace(",   \r\n    \r\n", $") \r\n OR ({args1}) in (")})";
-                                if (args1.StartsWith("(") || args1.EndsWith(")")) args1 = $"array[{args1.TrimStart('(').TrimEnd(')')}]";
+                                if (left.StartsWith("(") ||
+                                    left.EndsWith(")")) //在各大 Provider AdoProvider 中已约定，500元素分割, 3空格\r\n4空格
+                                    return
+                                        $"(({args1}) in {left.Replace(",   \r\n    \r\n", $") \r\n OR ({args1}) in (")})";
+                                if (args1.StartsWith("(") || args1.EndsWith(")"))
+                                    args1 = $"array[{args1.TrimStart('(').TrimEnd(')')}]";
                                 args1 = $"array[{args1}]";
                                 if (objExp != null)
                                 {
                                     var dbinfo = _common._orm.CodeFirst.GetDbInfo(objExp.Type);
                                     if (dbinfo != null) args1 = $"{args1}::{dbinfo.dbtype}";
                                 }
+
                                 return $"({left} @> {args1})";
                             case "Concat":
                                 left = objExp == null ? null : getExp(objExp);
-                                if (left.StartsWith("(") || left.EndsWith(")")) left = $"array[{left.TrimStart('(').TrimEnd(')')}]";
+                                if (left.StartsWith("(") || left.EndsWith(")"))
+                                    left = $"array[{left.TrimStart('(').TrimEnd(')')}]";
                                 var right2 = getExp(callExp.Arguments[argIndex]);
-                                if (right2.StartsWith("(") || right2.EndsWith(")")) right2 = $"array[{right2.TrimStart('(').TrimEnd(')')}]";
+                                if (right2.StartsWith("(") || right2.EndsWith(")"))
+                                    right2 = $"array[{right2.TrimStart('(').TrimEnd(')')}]";
                                 return $"({left} || {right2})";
                             case "GetLength":
                             case "GetLongLength":
                             case "Length":
                             case "Count":
                                 left = objExp == null ? null : getExp(objExp);
-                                if (left.StartsWith("(") || left.EndsWith(")")) left = $"array[{left.TrimStart('(').TrimEnd(')')}]";
+                                if (left.StartsWith("(") || left.EndsWith(")"))
+                                    left = $"array[{left.TrimStart('(').TrimEnd(')')}]";
                                 return $"case when {left} is null then 0 else array_length({left},1) end";
                         }
                     }
+
                     break;
                 case ExpressionType.MemberAccess:
                     var memExp = exp as MemberExpression;
@@ -221,13 +250,15 @@ namespace FreeSql.QuestDb
                         if (memParentExp.IsArray == true)
                         {
                             var left = getExp(memExp.Expression);
-                            if (left.StartsWith("(") || left.EndsWith(")")) left = $"array[{left.TrimStart('(').TrimEnd(')')}]";
+                            if (left.StartsWith("(") || left.EndsWith(")"))
+                                left = $"array[{left.TrimStart('(').TrimEnd(')')}]";
                             switch (memExp.Member.Name)
                             {
                                 case "Length":
                                 case "Count": return $"case when {left} is null then 0 else array_length({left},1) end";
                             }
                         }
+
                         switch (memParentExp.FullName)
                         {
                             case "Newtonsoft.Json.Linq.JToken":
@@ -238,19 +269,23 @@ namespace FreeSql.QuestDb
                                 {
                                     case "Count": return $"jsonb_array_length(coalesce({left},'[]'))";
                                 }
+
                                 break;
                         }
+
                         if (memParentExp == typeof(Dictionary<string, string>))
                         {
                             var left = getExp(memExp.Expression);
                             switch (memExp.Member.Name)
                             {
-                                case "Count": return $"case when {left} is null then 0 else array_length(akeys({left}),1) end";
+                                case "Count":
+                                    return $"case when {left} is null then 0 else array_length(akeys({left}),1) end";
                                 case "Keys": return $"akeys({left})";
                                 case "Values": return $"avals({left})";
                             }
                         }
                     }
+
                     break;
                 case ExpressionType.NewArrayInit:
                     var arrExp = exp as NewArrayExpression;
@@ -261,6 +296,7 @@ namespace FreeSql.QuestDb
                         if (a > 0) arrSb.Append(",");
                         arrSb.Append(getExp(arrExp.Expressions[a]));
                     }
+
                     if (arrSb.Length == 1) arrSb.Append("NULL");
                     return arrSb.Append("]").ToString();
                 case ExpressionType.ListInit:
@@ -273,6 +309,7 @@ namespace FreeSql.QuestDb
                         if (a > 0) listSb.Append(",");
                         listSb.Append(getExp(listExp.Initializers[a].Arguments.FirstOrDefault()));
                     }
+
                     if (listSb.Length == 1) listSb.Append("NULL");
                     return listSb.Append(")").ToString();
                 case ExpressionType.New:
@@ -283,8 +320,10 @@ namespace FreeSql.QuestDb
                         if (typeof(IEnumerable).IsAssignableFrom(newExp.Arguments[0].Type) == false) return "(NULL)";
                         return getExp(newExp.Arguments[0]);
                     }
+
                     return null;
             }
+
             return null;
         }
 
@@ -296,15 +335,19 @@ namespace FreeSql.QuestDb
                 {
                     case "Empty": return "''";
                 }
+
                 return null;
             }
+
             var left = ExpressionLambdaToSql(exp.Expression, tsc);
             switch (exp.Member.Name)
             {
                 case "Length": return $"char_length({left})";
             }
+
             return null;
         }
+
         public override string ExpressionLambdaToSqlMemberAccessDateTime(MemberExpression exp, ExpTSC tsc)
         {
             if (exp.Expression == null)
@@ -317,8 +360,10 @@ namespace FreeSql.QuestDb
                     case "MinValue": return "'0001/1/1 0:00:00'::timestamp";
                     case "MaxValue": return "'9999/12/31 23:59:59'::timestamp";
                 }
+
                 return null;
             }
+
             var left = ExpressionLambdaToSql(exp.Expression, tsc);
             switch (exp.Member.Name)
             {
@@ -332,11 +377,15 @@ namespace FreeSql.QuestDb
                 case "Hour": return $"extract(hour from ({left})::timestamp)";
                 case "Minute": return $"extract(minute from ({left})::timestamp)";
                 case "Second": return $"extract(second from ({left})::timestamp)";
-                case "Millisecond": return $"(extract(milliseconds from ({left})::timestamp)-extract(second from ({left})::timestamp)*1000)";
+                case "Millisecond":
+                    return
+                        $"(extract(milliseconds from ({left})::timestamp)-extract(second from ({left})::timestamp)*1000)";
                 case "Ticks": return $"(extract(epoch from ({left})::timestamp)*10000000+621355968000000000)";
             }
+
             return null;
         }
+
         public override string ExpressionLambdaToSqlMemberAccessTimeSpan(MemberExpression exp, ExpTSC tsc)
         {
             if (exp.Expression == null)
@@ -347,8 +396,10 @@ namespace FreeSql.QuestDb
                     case "MinValue": return "-922337203685477580"; //微秒 Ticks / 10
                     case "MaxValue": return "922337203685477580";
                 }
+
                 return null;
             }
+
             var left = ExpressionLambdaToSql(exp.Expression, tsc);
             switch (exp.Member.Name)
             {
@@ -364,6 +415,7 @@ namespace FreeSql.QuestDb
                 case "TotalMinutes": return $"(({left})/{(long)1000000 * 60})";
                 case "TotalSeconds": return $"(({left})/1000000)";
             }
+
             return null;
         }
 
@@ -383,15 +435,21 @@ namespace FreeSql.QuestDb
                     case "Concat":
                         return _common.StringConcat(exp.Arguments.Select(a => getExp(a)).ToArray(), null);
                     case "Format":
-                        if (exp.Arguments[0].NodeType != ExpressionType.Constant) throw new Exception(CoreStrings.Not_Implemented_Expression_ParameterUseConstant(exp,exp.Arguments[0]));
-                        var expArgsHack = exp.Arguments.Count == 2 && exp.Arguments[1].NodeType == ExpressionType.NewArrayInit ?
-                            (exp.Arguments[1] as NewArrayExpression).Expressions : exp.Arguments.Where((a, z) => z > 0);
+                        if (exp.Arguments[0].NodeType != ExpressionType.Constant)
+                            throw new Exception(
+                                CoreStrings.Not_Implemented_Expression_ParameterUseConstant(exp, exp.Arguments[0]));
+                        var expArgsHack =
+                            exp.Arguments.Count == 2 && exp.Arguments[1].NodeType == ExpressionType.NewArrayInit
+                                ? (exp.Arguments[1] as NewArrayExpression).Expressions
+                                : exp.Arguments.Where((a, z) => z > 0);
                         //3个 {} 时，Arguments 解析出来是分开的
                         //4个 {} 时，Arguments[1] 只能解析这个出来，然后里面是 NewArray []
                         var expArgs = expArgsHack.Select(a =>
                         {
-                            var atype = (a as UnaryExpression)?.Operand.Type.NullableTypeOrThis() ?? a.Type.NullableTypeOrThis();
-                            if (atype == typeof(string)) return $"'||{_common.IsNull(ExpressionLambdaToSql(a, tsc), "''")}||'";
+                            var atype = (a as UnaryExpression)?.Operand.Type.NullableTypeOrThis() ??
+                                        a.Type.NullableTypeOrThis();
+                            if (atype == typeof(string))
+                                return $"'||{_common.IsNull(ExpressionLambdaToSql(a, tsc), "''")}||'";
                             return $"'||{_common.IsNull($"({ExpressionLambdaToSql(a, tsc)})::text", "''")}||'";
                         }).ToArray();
                         return string.Format(ExpressionLambdaToSql(exp.Arguments[0], tsc), expArgs);
@@ -408,6 +466,7 @@ namespace FreeSql.QuestDb
                             var newToListSql = getExp(newToListArgs0);
                             return newToListSql;
                         }
+
                         break;
                 }
             }
@@ -424,18 +483,26 @@ namespace FreeSql.QuestDb
                         if (args0Value.Contains("%"))
                         {
                             if (exp.Method.Name == "StartsWith") return $"strpos({args0Value}, {left}) = 1";
-                            if (exp.Method.Name == "EndsWith") return $"strpos({args0Value}, {left}) = char_length({args0Value})";
+                            if (exp.Method.Name == "EndsWith")
+                                return $"strpos({args0Value}, {left}) = char_length({args0Value})";
                             return $"strpos({args0Value}, {left}) > 0";
                         }
+
                         var likeOpt = "LIKE";
                         if (exp.Arguments.Count > 1)
                         {
                             if (exp.Arguments[1].Type == typeof(bool) ||
                                 exp.Arguments[1].Type == typeof(StringComparison)) likeOpt = "ILIKE";
                         }
-                        if (exp.Method.Name == "StartsWith") return $"({left}) {likeOpt} {(args0Value.EndsWith("'") ? args0Value.Insert(args0Value.Length - 1, "%") : $"(({args0Value})::text || '%')")}";
-                        if (exp.Method.Name == "EndsWith") return $"({left}) {likeOpt} {(args0Value.StartsWith("'") ? args0Value.Insert(1, "%") : $"('%' || ({args0Value})::text)")}";
-                        if (args0Value.StartsWith("'") && args0Value.EndsWith("'")) return $"({left}) {likeOpt} {args0Value.Insert(1, "%").Insert(args0Value.Length, "%")}";
+
+                        if (exp.Method.Name == "StartsWith")
+                            return
+                                $"({left}) {likeOpt} {(args0Value.EndsWith("'") ? args0Value.Insert(args0Value.Length - 1, "%") : $"(({args0Value})::text || '%')")}";
+                        if (exp.Method.Name == "EndsWith")
+                            return
+                                $"({left}) {likeOpt} {(args0Value.StartsWith("'") ? args0Value.Insert(1, "%") : $"('%' || ({args0Value})::text)")}";
+                        if (args0Value.StartsWith("'") && args0Value.EndsWith("'"))
+                            return $"({left}) {likeOpt} {args0Value.Insert(1, "%").Insert(args0Value.Length, "%")}";
                         return $"({left}) {likeOpt} ('%' || ({args0Value})::text || '%')";
                     case "ToLower": return $"lower({left})";
                     case "ToUpper": return $"upper({left})";
@@ -461,6 +528,7 @@ namespace FreeSql.QuestDb
                             if (exp.Method.Name == "TrimStart") return $"ltrim({left})";
                             if (exp.Method.Name == "TrimEnd") return $"rtrim({left})";
                         }
+
                         var trimArg1 = "";
                         var trimArg2 = "";
                         foreach (var argsTrim02 in exp.Arguments)
@@ -471,6 +539,7 @@ namespace FreeSql.QuestDb
                                 var arritem = argsTrim02 as NewArrayExpression;
                                 argsTrim01s = arritem.Expressions.ToArray();
                             }
+
                             foreach (var argsTrim01 in argsTrim01s)
                             {
                                 var trimChr = getExp(argsTrim01).Trim('\'');
@@ -478,17 +547,25 @@ namespace FreeSql.QuestDb
                                 else trimArg2 += $" || ({trimChr})";
                             }
                         }
-                        if (exp.Method.Name == "Trim") left = $"trim({left}, {_common.FormatSql("{0}", trimArg1)}{trimArg2})";
-                        if (exp.Method.Name == "TrimStart") left = $"ltrim({left}, {_common.FormatSql("{0}", trimArg1)}{trimArg2})";
-                        if (exp.Method.Name == "TrimEnd") left = $"rtrim({left}, {_common.FormatSql("{0}", trimArg1)}{trimArg2})";
+
+                        if (exp.Method.Name == "Trim")
+                            left = $"trim({left}, {_common.FormatSql("{0}", trimArg1)}{trimArg2})";
+                        if (exp.Method.Name == "TrimStart")
+                            left = $"ltrim({left}, {_common.FormatSql("{0}", trimArg1)}{trimArg2})";
+                        if (exp.Method.Name == "TrimEnd")
+                            left = $"rtrim({left}, {_common.FormatSql("{0}", trimArg1)}{trimArg2})";
                         return left;
                     case "Replace": return $"replace({left}, {getExp(exp.Arguments[0])}, {getExp(exp.Arguments[1])})";
-                    case "CompareTo": return $"case when {left} = {getExp(exp.Arguments[0])} then 0 when {left} > {getExp(exp.Arguments[0])} then 1 else -1 end";
+                    case "CompareTo":
+                        return
+                            $"case when {left} = {getExp(exp.Arguments[0])} then 0 when {left} > {getExp(exp.Arguments[0])} then 1 else -1 end";
                     case "Equals": return $"({left} = ({getExp(exp.Arguments[0])})::text)";
                 }
             }
+
             return null;
         }
+
         public override string ExpressionLambdaToSqlCallMath(MethodCallExpression exp, ExpTSC tsc)
         {
             Func<Expression, string> getExp = exparg => ExpressionLambdaToSql(exparg, tsc);
@@ -499,7 +576,8 @@ namespace FreeSql.QuestDb
                 case "Floor": return $"floor({getExp(exp.Arguments[0])})";
                 case "Ceiling": return $"ceiling({getExp(exp.Arguments[0])})";
                 case "Round":
-                    if (exp.Arguments.Count > 1 && exp.Arguments[1].Type.FullName == "System.Int32") return $"round({getExp(exp.Arguments[0])}, {getExp(exp.Arguments[1])})";
+                    if (exp.Arguments.Count > 1 && exp.Arguments[1].Type.FullName == "System.Int32")
+                        return $"round({getExp(exp.Arguments[0])}, {getExp(exp.Arguments[1])})";
                     return $"round({getExp(exp.Arguments[0])})";
                 case "Exp": return $"exp({getExp(exp.Arguments[0])})";
                 case "Log": return $"log({getExp(exp.Arguments[0])})";
@@ -515,8 +593,10 @@ namespace FreeSql.QuestDb
                 case "Atan2": return $"atan2({getExp(exp.Arguments[0])}, {getExp(exp.Arguments[1])})";
                 case "Truncate": return $"trunc({getExp(exp.Arguments[0])}, 0)";
             }
+
             return null;
         }
+
         public override string ExpressionLambdaToSqlCallDateTime(MethodCallExpression exp, ExpTSC tsc)
         {
             Func<Expression, string> getExp = exparg => ExpressionLambdaToSql(exparg, tsc);
@@ -524,18 +604,26 @@ namespace FreeSql.QuestDb
             {
                 switch (exp.Method.Name)
                 {
-                    case "Compare": return $"extract(epoch from ({getExp(exp.Arguments[0])})::timestamp-({getExp(exp.Arguments[1])})::timestamp)";
-                    case "DaysInMonth": return $"extract(day from ({getExp(exp.Arguments[0])} || '-' || {getExp(exp.Arguments[1])} || '-01')::timestamp+'1 month'::interval-'1 day'::interval)";
-                    case "Equals": return $"(({getExp(exp.Arguments[0])})::timestamp = ({getExp(exp.Arguments[1])})::timestamp)";
+                    case "Compare":
+                        return
+                            $"extract(epoch from ({getExp(exp.Arguments[0])})::timestamp-({getExp(exp.Arguments[1])})::timestamp)";
+                    case "DaysInMonth":
+                        return
+                            $"extract(day from ({getExp(exp.Arguments[0])} || '-' || {getExp(exp.Arguments[1])} || '-01')::timestamp+'1 month'::interval-'1 day'::interval)";
+                    case "Equals":
+                        return $"(({getExp(exp.Arguments[0])})::timestamp = ({getExp(exp.Arguments[1])})::timestamp)";
 
                     case "IsLeapYear":
                         var isLeapYearArgs1 = getExp(exp.Arguments[0]);
-                        return $"(({isLeapYearArgs1})::int8%4=0 AND ({isLeapYearArgs1})::int8%100<>0 OR ({isLeapYearArgs1})::int8%400=0)";
+                        return
+                            $"(({isLeapYearArgs1})::int8%4=0 AND ({isLeapYearArgs1})::int8%100<>0 OR ({isLeapYearArgs1})::int8%400=0)";
 
-                    case "Parse": return ExpressionConstDateTime(exp.Arguments[0]) ?? $"({getExp(exp.Arguments[0])})::timestamp";
+                    case "Parse":
+                        return ExpressionConstDateTime(exp.Arguments[0]) ?? $"({getExp(exp.Arguments[0])})::timestamp";
                     case "ParseExact":
                     case "TryParse":
-                    case "TryParseExact": return ExpressionConstDateTime(exp.Arguments[0]) ?? $"({getExp(exp.Arguments[0])})::timestamp";
+                    case "TryParseExact":
+                        return ExpressionConstDateTime(exp.Arguments[0]) ?? $"({getExp(exp.Arguments[0])})::timestamp";
                 }
             }
             else
@@ -554,11 +642,16 @@ namespace FreeSql.QuestDb
                     case "AddTicks": return $"(({left})::timestamp+(({args1})/10||' microseconds')::interval)";
                     case "AddYears": return $"(({left})::timestamp+(({args1})||' year')::interval)";
                     case "Subtract":
-                        switch ((exp.Arguments[0].Type.IsNullableType() ? exp.Arguments[0].Type.GetGenericArguments().FirstOrDefault() : exp.Arguments[0].Type).FullName)
+                        switch ((exp.Arguments[0].Type.IsNullableType()
+                                    ? exp.Arguments[0].Type.GetGenericArguments().FirstOrDefault()
+                                    : exp.Arguments[0].Type).FullName)
                         {
-                            case "System.DateTime": return $"(extract(epoch from ({left})::timestamp-({args1})::timestamp)*1000000)";
-                            case "System.TimeSpan": return $"(({left})::timestamp-((({args1})/1000)||' milliseconds')::interval)";
+                            case "System.DateTime":
+                                return $"(extract(epoch from ({left})::timestamp-({args1})::timestamp)*1000000)";
+                            case "System.TimeSpan":
+                                return $"(({left})::timestamp-((({args1})/1000)||' milliseconds')::interval)";
                         }
+
                         break;
                     case "Equals": return $"({left} = ({args1})::timestamp)";
                     case "CompareTo": return $"extract(epoch from ({left})::timestamp-({args1})::timestamp)";
@@ -580,6 +673,7 @@ namespace FreeSql.QuestDb
                             case "'yyyy'": return $"to_char({left},'YYYY')";
                             case "'HH:mm:ss'": return $"to_char({left},'HH24:MI:SS')";
                         }
+
                         args1 = Regex.Replace(args1, "(yyyy|yy|MM|dd|HH|hh|mm|ss|tt)", m =>
                         {
                             switch (m.Groups[1].Value)
@@ -594,6 +688,7 @@ namespace FreeSql.QuestDb
                                 case "ss": return $"SS";
                                 case "tt": return $"%_a6";
                             }
+
                             return m.Groups[0].Value;
                         });
                         var argsFinds = new[] { "YYYY", "YY", "%_a1", "%_a2", "%_a3", "%_a4", "%_a5", "SS", "%_a6" };
@@ -602,27 +697,52 @@ namespace FreeSql.QuestDb
                         {
                             switch (argsSpts[a])
                             {
-                                case "M": argsSpts[a] = $"ltrim(to_char({left},'MM'),'0')"; break;
-                                case "d": argsSpts[a] = $"case when substr(to_char({left},'DD'),1,1) = '0' then substr(to_char({left},'DD'),2,1) else to_char({left},'DD') end"; break;
-                                case "H": argsSpts[a] = $"case when substr(to_char({left},'HH24'),1,1) = '0' then substr(to_char({left},'HH24'),2,1) else to_char({left},'HH24') end"; break;
-                                case "h": argsSpts[a] = $"case when substr(to_char({left},'HH12'),1,1) = '0' then substr(to_char({left},'HH12'),2,1) else to_char({left},'HH12') end"; break;
-                                case "m": argsSpts[a] = $"case when substr(to_char({left},'MI'),1,1) = '0' then substr(to_char({left},'MI'),2,1) else to_char({left},'MI') end"; break;
-                                case "s": argsSpts[a] = $"case when substr(to_char({left},'SS'),1,1) = '0' then substr(to_char({left},'SS'),2,1) else to_char({left},'SS') end"; break;
-                                case "t": argsSpts[a] = $"rtrim(to_char({left},'AM'),'M')"; break;
+                                case "M":
+                                    argsSpts[a] = $"ltrim(to_char({left},'MM'),'0')";
+                                    break;
+                                case "d":
+                                    argsSpts[a] =
+                                        $"case when substr(to_char({left},'DD'),1,1) = '0' then substr(to_char({left},'DD'),2,1) else to_char({left},'DD') end";
+                                    break;
+                                case "H":
+                                    argsSpts[a] =
+                                        $"case when substr(to_char({left},'HH24'),1,1) = '0' then substr(to_char({left},'HH24'),2,1) else to_char({left},'HH24') end";
+                                    break;
+                                case "h":
+                                    argsSpts[a] =
+                                        $"case when substr(to_char({left},'HH12'),1,1) = '0' then substr(to_char({left},'HH12'),2,1) else to_char({left},'HH12') end";
+                                    break;
+                                case "m":
+                                    argsSpts[a] =
+                                        $"case when substr(to_char({left},'MI'),1,1) = '0' then substr(to_char({left},'MI'),2,1) else to_char({left},'MI') end";
+                                    break;
+                                case "s":
+                                    argsSpts[a] =
+                                        $"case when substr(to_char({left},'SS'),1,1) = '0' then substr(to_char({left},'SS'),2,1) else to_char({left},'SS') end";
+                                    break;
+                                case "t":
+                                    argsSpts[a] = $"rtrim(to_char({left},'AM'),'M')";
+                                    break;
                                 default:
                                     var argsSptsA = argsSpts[a];
                                     if (argsSptsA.StartsWith("'")) argsSptsA = argsSptsA.Substring(1);
                                     if (argsSptsA.EndsWith("'")) argsSptsA = argsSptsA.Remove(argsSptsA.Length - 1);
-                                    argsSpts[a] = argsFinds.Any(m => argsSptsA.Contains(m)) ? $"to_char({left},'{argsSptsA}')" : $"'{argsSptsA}'"; 
+                                    argsSpts[a] = argsFinds.Any(m => argsSptsA.Contains(m))
+                                        ? $"to_char({left},'{argsSptsA}')"
+                                        : $"'{argsSptsA}'";
                                     break;
                             }
                         }
+
                         if (argsSpts.Length > 0) args1 = $"({string.Join(" || ", argsSpts.Where(a => a != "''"))})";
-                        return args1.Replace("%_a1", "MM").Replace("%_a2", "DD").Replace("%_a3", "HH24").Replace("%_a4", "HH12").Replace("%_a5", "MI").Replace("%_a6", "AM");
+                        return args1.Replace("%_a1", "MM").Replace("%_a2", "DD").Replace("%_a3", "HH24")
+                            .Replace("%_a4", "HH12").Replace("%_a5", "MI").Replace("%_a6", "AM");
                 }
             }
+
             return null;
         }
+
         public override string ExpressionLambdaToSqlCallTimeSpan(MethodCallExpression exp, ExpTSC tsc)
         {
             Func<Expression, string> getExp = exparg => ExpressionLambdaToSql(exparg, tsc);
@@ -657,8 +777,10 @@ namespace FreeSql.QuestDb
                     case "ToString": return $"({left})::varchar";
                 }
             }
+
             return null;
         }
+
         public override string ExpressionLambdaToSqlCallConvert(MethodCallExpression exp, ExpTSC tsc)
         {
             Func<Expression, string> getExp = exparg => ExpressionLambdaToSql(exparg, tsc);
@@ -669,7 +791,8 @@ namespace FreeSql.QuestDb
                     case "ToBoolean": return $"(({getExp(exp.Arguments[0])})::varchar not in ('0','false','f','no'))";
                     case "ToByte": return $"({getExp(exp.Arguments[0])})::int2";
                     case "ToChar": return $"substr(({getExp(exp.Arguments[0])})::char, 1, 1)";
-                    case "ToDateTime": return ExpressionConstDateTime(exp.Arguments[0]) ?? $"({getExp(exp.Arguments[0])})::timestamp";
+                    case "ToDateTime":
+                        return ExpressionConstDateTime(exp.Arguments[0]) ?? $"({getExp(exp.Arguments[0])})::timestamp";
                     case "ToDecimal": return $"({getExp(exp.Arguments[0])})::numeric";
                     case "ToDouble": return $"({getExp(exp.Arguments[0])})::float8";
                     case "ToInt16": return $"({getExp(exp.Arguments[0])})::int2";
@@ -683,7 +806,26 @@ namespace FreeSql.QuestDb
                     case "ToUInt64": return $"({getExp(exp.Arguments[0])})::int8";
                 }
             }
+
             return null;
+        }
+    }
+
+    class QuestDbExpressionVisitor : ExpressionVisitor
+    {
+        private List<string> list = new List<string>();
+
+        protected override Expression VisitMember(MemberExpression node)
+        {
+            list.Add(node.Member.Name);
+            return node;
+        }
+
+        internal string Fields()
+        {
+            var fileds = string.Join(",", list);
+            list.Clear();
+            return fileds;
         }
     }
 }

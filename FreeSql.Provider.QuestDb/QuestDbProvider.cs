@@ -19,7 +19,6 @@ using System.Threading;
 
 namespace FreeSql.QuestDb
 {
-
     public class QuestDbProvider<TMark> : BaseDbProvider, IFreeSql<TMark>
     {
         static QuestDbProvider()
@@ -72,55 +71,94 @@ namespace FreeSql.QuestDb
             var MethodJTokenParse = typeof(JToken).GetMethod("Parse", new[] { typeof(string) });
             var MethodJObjectParse = typeof(JObject).GetMethod("Parse", new[] { typeof(string) });
             var MethodJArrayParse = typeof(JArray).GetMethod("Parse", new[] { typeof(string) });
-            var MethodJsonConvertDeserializeObject = typeof(JsonConvert).GetMethod("DeserializeObject", new[] { typeof(string), typeof(Type) });
-            var MethodToString = typeof(Utils).GetMethod("ToStringConcat", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(object) }, null);
-            Utils.GetDataReaderValueBlockExpressionSwitchTypeFullName.Add((LabelTarget returnTarget, Expression valueExp, Type type) =>
-            {
-                switch (type.FullName)
+            var MethodJsonConvertDeserializeObject =
+                typeof(JsonConvert).GetMethod("DeserializeObject", new[] { typeof(string), typeof(Type) });
+            var MethodToString = typeof(Utils).GetMethod("ToStringConcat", BindingFlags.Public | BindingFlags.Static,
+                null, new[] { typeof(object) }, null);
+            Utils.GetDataReaderValueBlockExpressionSwitchTypeFullName.Add(
+                (LabelTarget returnTarget, Expression valueExp, Type type) =>
                 {
-                    case "Newtonsoft.Json.Linq.JToken":
+                    switch (type.FullName)
+                    {
+                        case "Newtonsoft.Json.Linq.JToken":
+                            return Expression.IfThenElse(
+                                Expression.TypeIs(valueExp, typeof(string)),
+                                Expression.Return(returnTarget,
+                                    Expression.TypeAs(
+                                        Expression.Call(MethodJTokenParse,
+                                            Expression.Convert(valueExp, typeof(string))), typeof(JToken))),
+                                Expression.Return(returnTarget,
+                                    Expression.TypeAs(Expression.Call(MethodJTokenFromObject, valueExp),
+                                        typeof(JToken))));
+                        case "Newtonsoft.Json.Linq.JObject":
+                            return Expression.IfThenElse(
+                                Expression.TypeIs(valueExp, typeof(string)),
+                                Expression.Return(returnTarget,
+                                    Expression.TypeAs(
+                                        Expression.Call(MethodJObjectParse,
+                                            Expression.Convert(valueExp, typeof(string))), typeof(JObject))),
+                                Expression.Return(returnTarget,
+                                    Expression.TypeAs(Expression.Call(MethodJObjectFromObject, valueExp),
+                                        typeof(JObject))));
+                        case "Newtonsoft.Json.Linq.JArray":
+                            return Expression.IfThenElse(
+                                Expression.TypeIs(valueExp, typeof(string)),
+                                Expression.Return(returnTarget,
+                                    Expression.TypeAs(
+                                        Expression.Call(MethodJArrayParse,
+                                            Expression.Convert(valueExp, typeof(string))), typeof(JArray))),
+                                Expression.Return(returnTarget,
+                                    Expression.TypeAs(Expression.Call(MethodJArrayFromObject, valueExp),
+                                        typeof(JArray))));
+                        case "Npgsql.LegacyPostgis.PostgisGeometry":
+                            return Expression.Return(returnTarget, valueExp);
+                        case "NetTopologySuite.Geometries.Geometry":
+                            return Expression.Return(returnTarget, valueExp);
+                    }
+
+                    if (typeof(IList).IsAssignableFrom(type))
                         return Expression.IfThenElse(
                             Expression.TypeIs(valueExp, typeof(string)),
-                            Expression.Return(returnTarget, Expression.TypeAs(Expression.Call(MethodJTokenParse, Expression.Convert(valueExp, typeof(string))), typeof(JToken))),
-                            Expression.Return(returnTarget, Expression.TypeAs(Expression.Call(MethodJTokenFromObject, valueExp), typeof(JToken))));
-                    case "Newtonsoft.Json.Linq.JObject":
-                        return Expression.IfThenElse(
-                            Expression.TypeIs(valueExp, typeof(string)),
-                            Expression.Return(returnTarget, Expression.TypeAs(Expression.Call(MethodJObjectParse, Expression.Convert(valueExp, typeof(string))), typeof(JObject))),
-                            Expression.Return(returnTarget, Expression.TypeAs(Expression.Call(MethodJObjectFromObject, valueExp), typeof(JObject))));
-                    case "Newtonsoft.Json.Linq.JArray":
-                        return Expression.IfThenElse(
-                            Expression.TypeIs(valueExp, typeof(string)),
-                            Expression.Return(returnTarget, Expression.TypeAs(Expression.Call(MethodJArrayParse, Expression.Convert(valueExp, typeof(string))), typeof(JArray))),
-                            Expression.Return(returnTarget, Expression.TypeAs(Expression.Call(MethodJArrayFromObject, valueExp), typeof(JArray))));
-                    case "Npgsql.LegacyPostgis.PostgisGeometry": 
-                        return Expression.Return(returnTarget, valueExp);
-                    case "NetTopologySuite.Geometries.Geometry": 
-                        return Expression.Return(returnTarget, valueExp);
-                }
-                if (typeof(IList).IsAssignableFrom(type))
-                    return Expression.IfThenElse(
-                        Expression.TypeIs(valueExp, typeof(string)),
-                        Expression.Return(returnTarget, Expression.TypeAs(Expression.Call(MethodJsonConvertDeserializeObject, Expression.Convert(valueExp, typeof(string)), Expression.Constant(type, typeof(Type))), type)),
-                        Expression.Return(returnTarget, Expression.TypeAs(Expression.Call(MethodJsonConvertDeserializeObject, Expression.Convert(Expression.Call(MethodToString, valueExp), typeof(string)), Expression.Constant(type, typeof(Type))), type)));
-                return null;
-            }); 
-            
-            Select0Provider._dicMethodDataReaderGetValue[typeof(Guid)] = typeof(DbDataReader).GetMethod("GetGuid", new Type[] { typeof(int) });
+                            Expression.Return(returnTarget,
+                                Expression.TypeAs(
+                                    Expression.Call(MethodJsonConvertDeserializeObject,
+                                        Expression.Convert(valueExp, typeof(string)),
+                                        Expression.Constant(type, typeof(Type))), type)),
+                            Expression.Return(returnTarget,
+                                Expression.TypeAs(
+                                    Expression.Call(MethodJsonConvertDeserializeObject,
+                                        Expression.Convert(Expression.Call(MethodToString, valueExp), typeof(string)),
+                                        Expression.Constant(type, typeof(Type))), type)));
+                    return null;
+                });
+
+            Select0Provider._dicMethodDataReaderGetValue[typeof(Guid)] =
+                typeof(DbDataReader).GetMethod("GetGuid", new Type[] { typeof(int) });
         }
 
-        public override ISelect<T1> CreateSelectProvider<T1>(object dywhere) => new QuestDbSelect<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression, dywhere);
-        public override IInsert<T1> CreateInsertProvider<T1>() => new QuestDbInsert<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression);
-        public override IUpdate<T1> CreateUpdateProvider<T1>(object dywhere) => new QuestDbUpdate<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression, dywhere);
-        public override IDelete<T1> CreateDeleteProvider<T1>(object dywhere) => new QuestDbDelete<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression, dywhere);
-        public override IInsertOrUpdate<T1> CreateInsertOrUpdateProvider<T1>() => new QuestDbInsertOrUpdate<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression);
+        public override ISelect<T1> CreateSelectProvider<T1>(object dywhere) =>
+            new QuestDbSelect<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression, dywhere);
 
-        public QuestDbProvider(string masterConnectionString, string[] slaveConnectionString, Func<DbConnection> connectionFactory = null)
+        public override IInsert<T1> CreateInsertProvider<T1>() =>
+            new QuestDbInsert<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression);
+
+        public override IUpdate<T1> CreateUpdateProvider<T1>(object dywhere) =>
+            new QuestDbUpdate<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression, dywhere);
+
+        public override IDelete<T1> CreateDeleteProvider<T1>(object dywhere) =>
+            new QuestDbDelete<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression, dywhere);
+
+        public override IInsertOrUpdate<T1> CreateInsertOrUpdateProvider<T1>() =>
+            new QuestDbInsertOrUpdate<T1>(this, this.InternalCommonUtils, this.InternalCommonExpression);
+
+        public QuestDbProvider(string masterConnectionString, string[] slaveConnectionString,
+            Func<DbConnection> connectionFactory = null)
         {
             this.InternalCommonUtils = new QuestDbUtils(this);
             this.InternalCommonExpression = new QuestDbExpression(this.InternalCommonUtils);
 
-            this.Ado = new QuestDbAdo(this.InternalCommonUtils, masterConnectionString, slaveConnectionString, connectionFactory);
+            this.Ado = new QuestDbAdo(this.InternalCommonUtils, masterConnectionString, slaveConnectionString,
+                connectionFactory);
             this.Aop = new AopProvider();
 
             this.DbFirst = new QuestDbDbFirst(this, this.InternalCommonUtils, this.InternalCommonExpression);
@@ -137,6 +175,7 @@ namespace FreeSql.QuestDb
 
         ~QuestDbProvider() => this.Dispose();
         int _disposeCounter;
+
         public override void Dispose()
         {
             if (Interlocked.Increment(ref _disposeCounter) != 1) return;

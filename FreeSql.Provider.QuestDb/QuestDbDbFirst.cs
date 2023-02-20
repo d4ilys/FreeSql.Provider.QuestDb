@@ -730,10 +730,25 @@ namespace FreeSql.QuestDb
 
             resList.ForEach(s =>
             {
-                tables.Add(new DbTableInfo()
+                var tableColumns = _orm.Ado.ExecuteDataTable($"SHOW COLUMNS FROM '{s}'");
+                List<DbColumnInfo> dbColumnInfos = new List<DbColumnInfo>();
+                var dbTableInfo = new DbTableInfo()
                 {
-                    Name = s
-                });
+                    Name = s,
+                    Columns = new List<DbColumnInfo>()
+                };
+                foreach (DataRow tableColumnsRow in tableColumns.Rows)
+                {
+                    dbColumnInfos.Add(new DbColumnInfo()
+                    {
+                        Name = tableColumnsRow["column"].ToString(),
+                        DbTypeText = tableColumnsRow["type"].ToString(),
+                        Table = dbTableInfo,
+                    });
+                }
+
+                dbTableInfo.Columns = dbColumnInfos;
+                tables.Add(dbTableInfo);
             });
             return tables;
         }

@@ -46,7 +46,7 @@ namespace FreeSql.QuestDb
 
             bool isdic;
             if (param is bool || param is bool?)
-                return (bool)param ? "'t'" : "'f'";
+                return (bool)param;
             else if (param is string)
                 return string.Concat("'", param.ToString().Replace("'", "''"), "'");
             else if (param is char)
