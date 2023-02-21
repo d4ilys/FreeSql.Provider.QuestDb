@@ -1,11 +1,13 @@
-﻿using System.Data;
-using System.Linq.Expressions;
-using FreeSql.Tests.QuestDb.QuestDbTestModel;
-using Newtonsoft.Json.Linq;
-using System.Numerics;
-using System.Runtime.InteropServices;
+﻿using CsvHelper;
 using FreeSql;
-using FreeSql.Provider.QuestDb;
+using Newtonsoft.Json;
+using System.Collections;
+using System.ComponentModel.Design;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using Microsoft.VisualBasic;
 
 namespace Test
 {
@@ -15,22 +17,49 @@ namespace Test
             .UseConnectionString(FreeSql.DataType.QuestDb,
                 @"host=192.168.0.36;port=8812;username=admin;password=quest;database=qdb;ServerCompatibilityMode=NoTypeLoading;")
             .UseMonitorCommand(cmd => Console.WriteLine($"Sql：{cmd.CommandText}")) //监听SQL语句
+            .UseQuestDbRestAPI("192.168.0.36:9001", "admin", "ushahL(aer2r")
             .UseNoneCommandParameter(true)
             .Build();
 
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            var sql = fsql.Select<QuestDb_Model_Test01>()
-                .LatestOn(q => q.CreateTime, q => new { q.Id, q.NameUpdate })
-                .ToSql();
-            Console.WriteLine(sql);
-            var sql2 = fsql.Select<QuestDb_Model_Test01>()
-                .SampleBy(1, SampleUnits.d)
-                .WithTempQuery(q => new { q.Id, q.Activos, count = SqlExt.Count(q.Id).ToValue() })
-                .Where(q => q.Id != "1")
-                .ToSql();
-            Console.WriteLine(sql2);
+            //var date = DateTime.Parse("2023-12-21 15:15:11");
+            //var list = new List<QuestDb_Model_Test01>();
+            //for (int i = 0; i < 100000; i++)
+            //{
+            //    list.Add(new QuestDb_Model_Test01()
+            //    {
+            //        Primarys = Guid.NewGuid().ToString(),
+            //        CreateTime = date,
+            //        Activos = 100 + i,
+            //        Id = "1",
+            //        IsCompra = true,
+            //        NameInsert = "NameInsertAsync",
+            //        NameUpdate = "NameUpdate"
+            //    });
+            //}
+            //Stopwatch stopwatch = Stopwatch.StartNew();
+            //var result = fsql.Insert(list).ExecuteBulkCopy();
+            //stopwatch.Stop();
+            //Console.WriteLine($"批量插入10000条数据，成功：{result}条，耗时：{stopwatch.Elapsed}");
+            //Console.WriteLine(sql);
+            Parallel.For(0, 10, i =>
+            {
+                var sql = fsql.Insert(new QuestDb_Model_Test01()
+                {
+                    Activos = 1,
+                    CreateTime = DateTime.Now,
+                    Id = "Id",
+                    NameInsert = "1",
+                    IsCompra = true,
+                    NameUpdate = "update"
+                }).ExecuteAffrows();
+                Console.WriteLine(sql);
+            });
+
+            Console.ReadKey();
+
             //var select = fsql.Select<Topic, Category, CategoryType>()
             //    .LeftJoin(w => w.t1.CategoryId == w.t2.Id)
             //    .LeftJoin(w => w.t2.ParentId == w.t3.Id)

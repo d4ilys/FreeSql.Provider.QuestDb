@@ -12,6 +12,8 @@ namespace Test
     [Index("Id_Index", nameof(Id), false)]
     class QuestDb_Model_Test01
     {
+        public string Primarys { get; set; }
+
         [Column(DbType = "symbol")] public string Id { get; set; }
 
         [Column(OldName = "Name")] public string NameUpdate { get; set; }

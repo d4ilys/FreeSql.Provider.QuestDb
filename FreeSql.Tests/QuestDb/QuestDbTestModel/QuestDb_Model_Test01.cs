@@ -12,9 +12,9 @@ namespace FreeSql.Tests.QuestDb.QuestDbTestModel
     [Index("Id_Index", nameof(Id), false)]
     class QuestDb_Model_Test01
     {
-        [Column(IsPrimary = true)] public string Primarys { get; set; }
+        public string Primarys { get; set; }
 
-        [Column(DbType = "symbol")] public string Id { get; set; }
+        [Column(DbType = "symbol",IsPrimary = true)] public string Id { get; set; }
 
         [Column(OldName = "Name")] public string NameUpdate { get; set; }
 
