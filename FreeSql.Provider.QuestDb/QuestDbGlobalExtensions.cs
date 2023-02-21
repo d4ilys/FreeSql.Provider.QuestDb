@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using FreeSql.Provider.QuestDb;
+using System.Net;
 
 public static partial class QuestDbGlobalExtensions
 {
@@ -70,6 +71,10 @@ public static partial class QuestDbGlobalExtensions
     /// <returns></returns>
     public static async Task<int> ExecuteBulkCopyAsync<T>(this IInsert<T> that) where T : class
     {
+        if (string.IsNullOrWhiteSpace(RestAPIExtension.BaseUrl))
+        {
+            throw new Exception("BulkCopy功能需要启用RestAPI，启用方式：new FreeSqlBuilder().UseQuestDbRestAPI(\"localhost:9000\", \"username\", \"password\")");
+        }
         var result = 0;
         var fileName = $"{Guid.NewGuid()}.csv";
         var filePath = Path.Combine(AppContext.BaseDirectory, fileName);
@@ -108,7 +113,8 @@ public static partial class QuestDbGlobalExtensions
             }
 
             var httpContent = new MultipartFormDataContent(boundary);
-            client.DefaultRequestHeaders.Add("Authorization", RestAPIExtension.authorization);
+            if (!string.IsNullOrWhiteSpace(RestAPIExtension.authorization))
+                client.DefaultRequestHeaders.Add("Authorization", RestAPIExtension.authorization);
             httpContent.Add(new StringContent(schema), "schema");
             httpContent.Add(new ByteArrayContent(File.ReadAllBytes(filePath)), "data");
             //boundary带双引号 可能导致服务器错误情况
@@ -151,6 +157,12 @@ public static partial class QuestDbGlobalExtensions
         return result;
     }
 
+    /// <summary>
+    /// 批量快速插入
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="that"></param>
+    /// <returns></returns>
     public static int ExecuteBulkCopy<T>(this IInsert<T> insert) where T : class
     {
         return ExecuteBulkCopyAsync(insert).GetAwaiter().GetResult();
@@ -170,7 +182,7 @@ public static class SampleByExtension
         Value = string.Empty
     };
 
-    public static void Initialize()
+    internal static void Initialize()
     {
         IsExistence.Value = false;
         SamoleByString.Value = string.Empty;
@@ -207,7 +219,7 @@ public static class LatestOnExtension
         Value = string.Empty
     };
 
-    public static void Initialize()
+    internal static void Initialize()
     {
         IsExistence.Value = false;
         LatestOnString.Value = string.Empty;
@@ -326,7 +338,7 @@ public static class RestAPIExtension
             var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
             authorization = $"Basic {base64}";
         }
-
+        buider.UseNoneCommandParameter(true);
         return buider;
     }
 }
